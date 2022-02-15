@@ -41,6 +41,5 @@ class FixGuestAdditions < VagrantVbguest::Installers::RedHat
       config.vm.provision "puppet" do |puppet|
         puppet.manifests_path = "puppet/manifests"
         puppet.manifest_file = "nodejs.pp"
-      end
-    
+      end    
     end
