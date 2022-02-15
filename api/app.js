@@ -22,6 +22,7 @@ app.get('/test', (req, res) => {
 //checking the srerver for listening on port 3000
 app.listen(HTTP_PORT, () => console.log("Server is listening on port " + HTTP_PORT));
 
+// creating weather table into the database
 db.run(
     `CREATE TABLE IF NOT EXISTS weather (temprature FLOAT NOT NULL, time timestamp)`
 );
@@ -34,6 +35,7 @@ app.get('/temprature', async (request, response) => {
             console.log(err.message)
         }
     });
+
     // checking when the last temprature was pulled
     let currentTemp = {};
     let cachedData = await getData();
@@ -97,7 +99,6 @@ getTemprature = async () => {
     const api_url = `https://www.metaweather.com/api/location/2475687`;
     const fetch_response = await fetch(api_url);
     const data = await fetch_response.json();
-    // console.log(data.consolidated_weather)
 
     // get the time stamp
     const timeStamp = new Date();
