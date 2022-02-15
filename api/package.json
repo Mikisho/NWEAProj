@@ -9,7 +9,9 @@
   "author": "Mikias Hundie",
   "license": "MIT",
   "dependencies": {
+    "date-and-time": "^2.1.2",
     "express": "^4.17.2",
-    "node-fetch": "^2.6.7"
+    "node-fetch": "^2.6.7",
+    "sqlite3": "^5.0.2"
   }
 }
