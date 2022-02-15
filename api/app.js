@@ -7,7 +7,7 @@ const app = express();
 const HTTP_PORT = 3000;
 const dbFile = './weatherData.db';
 
-const db = new sqlite3.Database(dbFile, err => {
+let db = new sqlite3.Database(dbFile, err => {
     if(err) {
         console.log(err.message)
     }
@@ -22,12 +22,84 @@ app.get('/test', (req, res) => {
 //checking the srerver for listening on port 3000
 app.listen(HTTP_PORT, () => console.log("Server is listening on port " + HTTP_PORT));
 
+db.run(
+    `CREATE TABLE IF NOT EXISTS weather (temprature FLOAT NOT NULL, time timestamp)`
+);
+
 app.get('/temprature', async (request, response) => {
-    const api_url = `https://www.metaweather.com/api/location/2475687`
+
+     // to open the db after closing
+     db = new sqlite3.Database(dbFile, err => {
+        if (err) {
+            console.log(err.message)
+        }
+    });
+    // checking when the last temprature was pulled
+    let currentTemp = {};
+    let cachedData = await getData();
+
+    if (!cachedData?.time) {
+        currentTemp = await getTemprature();
+    }
+    else {
+        currentTemp = await getData();
+    }
+
+    response.json(currentTemp);
+
+    db.close(err => {
+        if (err) {
+            console.log(err.message);
+        }
+    });   
+});
+
+// querying the data from the Database
+var getData = () => {
+    return new Promise((resolve, reject) => {
+        db.get(
+            `SELECT * FROM weather
+            WHERE time >= time('now', '-500 minutes')
+            ORDER BY time DESC
+            LIMIT 1`, (err, row) => {
+            if (err) {
+                console.log("query error", err.message);
+                reject(err);
+            }
+            else {
+                console.log("query success", row);
+                resolve(row);
+            }
+
+        });
+    })
+}
+
+// writing the temprature and time stamp into the database
+function insertData(higherTemp) {
+    console.log("Insert")
+    const sql = `INSERT INTO weather (temprature, time) values(?, time())`;
+
+    db.run(
+        sql,
+        [higherTemp],
+        (err) => {
+            if (err) return console.error(err.message);
+
+            console.log('A new row has been created');
+        }
+    );
+}
+
+// fetching the data from the metaweather api
+getTemprature = async () => {
+    console.log("Temprature API")
+    const api_url = `https://www.metaweather.com/api/location/2475687`;
     const fetch_response = await fetch(api_url);
     const data = await fetch_response.json();
-     // get the time stamp
-    // const timestamp = data.time
+    // console.log(data.consolidated_weather)
+
+    // get the time stamp
     const timeStamp = new Date();
     data.timeStamp = timeStamp;
 
@@ -42,35 +114,8 @@ app.get('/temprature', async (request, response) => {
     const higherTemp = sortedTemp.sort((a, b) => {
         return parseFloat(b['the_temp']) - parseFloat(a['the_temp']);
     })[0]['the_temp'];
-    
-    response.json({ "temprature": `${higherTemp}`, "timeStamp": `${val}` });
 
-    db.run(
-        `CREATE TABLE IF NOT EXISTS weather (temprature FLOAT NOT NULL, time timestamp)`
-     );
- 
-     db.run(
-         `SELECT temprature, time FROM weather
-          WHERE time >= time('now', '-5 minutes')
-          ORDER BY time DESC
-          LIMIT 1`
-     );
- 
-     const sql = `INSERT INTO weather (temprature, time) values(?, ?)`;
+    insertData(higherTemp);
+    return { "temprature": `${higherTemp}`, "timeStamp": `${val}` };
 
-     db.run(
-         sql,
-         [higherTemp, val],
-         (err) => {
-             if (err) return console.error(err.message);
-
-             console.log('A new row has been created');
-         }
-     );
-
-     db.close(err => {
-        if(err) {
-            console.log(err.message);
-        }
-    });
-});
+}
